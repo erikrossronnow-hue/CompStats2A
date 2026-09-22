@@ -49,3 +49,6 @@ Piecewise_simulation = function(N = 1, log_f, y_seg, ...) {
   }
   x[accept]
 }
+
+
+
