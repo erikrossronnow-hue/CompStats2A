@@ -13,8 +13,14 @@ DT = as.data.table(poisson)
 DT[, z := as.integer(z)]
 
 #load the necessary functions, not many of them so no fancy setup. 
+
+#source("functions\log_f.r")
+#source("functions\Piecewise_simulation.R")
+
 source("log_f.r")
+source("d_log_f.r")
 source("Piecewise_simulation.R")
+source("Piecewise_simulation2.R")
 
 # want to plot the function so we can see how many breakpoints we need approx:
 # chatmaxxing btw to make it look niceeeee :))
@@ -35,8 +41,12 @@ plot(
 # trial 1
 set.seed(1)
 y_seg = c(0.18, 0.3) # note that these y's are on each side of the bell curve 
-sim = Piecewise_simulation(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
+sim = piecewise_simulation(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
 hist(sim, breaks=50)
+
+sim2 = piecewise_simulation2(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
+
+hist(sim2, breaks = 50)
 
 # benchmarking: 
 N_bench = 10000
@@ -47,13 +57,22 @@ bm_piecewise = bench::mark(
   piecewise = {
     set.seed(420)
     
-    Piecewise_simulation(
+    piecewise_simulation(
       N = N_bench,
       log_f = log_f,
       y_seg = y_seg,
       x_dat = DT$x,
       z_dat = DT$z
     )
+  },
+  
+  piecewise2 = {
+    piecewise_simulation2(
+      N=1000, 
+      log_f, 
+      y_seg=y_seg, 
+      x_dat = DT$x, 
+      z_dat = DT$z)
   },
   
   iterations = 100,
@@ -67,7 +86,15 @@ plot(bm_piecewise)
 
 set.seed(123) 
 #acceptance rate stuff
-y = Piecewise_simulation(
+y = piecewise_simulation(
+  N = N_bench,
+  log_f = log_f,
+  y_seg = c(0.18, 0.30),
+  x_dat = DT$x,
+  z_dat = DT$z
+)
+
+y2 = piecewise_simulation2(
   N = N_bench,
   log_f = log_f,
   y_seg = c(0.18, 0.30),
@@ -76,7 +103,7 @@ y = Piecewise_simulation(
 )
 
 length(y) / N_bench # around 0.7 
-
+length(y2) / N_bench
 
 
 # profiling
@@ -85,7 +112,7 @@ p1 = profvis::profvis({
   
   set.seed(123)
   
-  y <- Piecewise_simulation(
+  y <- piecewise_simulation(
     N = 5e6,
     log_f = log_f,
     y_seg = c(0.18, 0.30),
@@ -94,6 +121,7 @@ p1 = profvis::profvis({
   )
   
 }, interval = 0.001)
+
 
 # more or less confirms that the stuff we knew was insane dogshit, was in fact
 # insane dogshit. 
@@ -104,7 +132,7 @@ p2 = profvis::profvis({
   
   set.seed(123)
   
-  y <- Piecewise_simulation(
+  y <- piecewise_simulation(
     N = 5e6,
     log_f = log_f,
     y_seg = c(0.1, 0.18, 0.30, 0.4), #finer grid, does it dominate profile?
@@ -114,6 +142,21 @@ p2 = profvis::profvis({
   
 }, interval = 0.001)
 p2
+
+p3 = profvis::profvis({
+  
+  set.seed(123)
+
+  y2 = piecewise_simulation2(
+    N = N_bench,
+    log_f = log_f,
+    y_seg = c(0.18, 0.30),
+    x_dat = DT$x,
+    z_dat = DT$z
+  )
+  
+  
+}, interval = 0.001)
 
 
 
@@ -140,7 +183,7 @@ benchmark_results <- rbindlist(lapply(seq_along(m_values), function(j) {
     piecewise = {
       set.seed(420)
       
-      Piecewise_simulation(
+      piecewise_simulation(
         N = N_bench,
         log_f = log_f,
         y_seg = y_seg,
@@ -156,7 +199,7 @@ benchmark_results <- rbindlist(lapply(seq_along(m_values), function(j) {
   # Separate deterministic run to obtain the acceptance rate
   set.seed(420)
   
-  y_accepted <- Piecewise_simulation(
+  y_accepted <- piecewise_simulation(
     N = N_bench,
     log_f = log_f,
     y_seg = y_seg,
@@ -232,4 +275,5 @@ ggplot(plot_data, aes(x = m, y = value)) +
 benchmark_results[, ms_per_accepted_draw :=
                     median_ms / (N_bench * acceptance_rate)
 ]
+
 
