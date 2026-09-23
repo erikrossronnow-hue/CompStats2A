@@ -7,13 +7,14 @@ library(numDeriv)
 library(profvis)
 library(bench)
 # if u have downloaded this script u need to grab the poisson.csv file urself!
-poisson = read.csv("poisson.csv")
+#poisson = read.csv("poisson.csv")
+poisson = read.csv("data/poisson.csv")
 DT = as.data.table(poisson)
 DT[, z := as.integer(z)]
 
 #load the necessary functions, not many of them so no fancy setup. 
-source("functions/log_f.r")
-source("functions/Piecewise_simulation.R")
+source("log_f.r")
+source("Piecewise_simulation.R")
 
 # want to plot the function so we can see how many breakpoints we need approx:
 # chatmaxxing btw to make it look niceeeee :))
