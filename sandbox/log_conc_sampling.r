@@ -34,6 +34,19 @@ plot(
   xlab = expression(y),
   ylab = expression(tilde(f)(y) / max(tilde(f)))
 )
+
+yy <- seq(0.01, 0.5, by = 0.001)
+
+log_vals <- log_f(yy, x_dat = DT$x, z_dat = DT$z)
+
+plot(
+  yy,
+  log_vals,
+  type = "l",
+  main = "Log target density",
+  xlab = expression(y),
+  ylab = expression(log(f(y)))
+)
 # unironically just a bell curve thingie, completely fine to just have 
 # m=2 here, one segments from y in (0,0.25) and another from(0.25, inf)
 # so chose y_1 = 0.18 and y_2 = 0.3 for each side of the curve.
@@ -44,8 +57,9 @@ y_seg = c(0.18, 0.3) # note that these y's are on each side of the bell curve
 sim = piecewise_simulation(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
 hist(sim, breaks=50)
 
-sim2 = piecewise_simulation2(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
 
+# trial 2 
+sim2 = piecewise_simulation2(N=1000, log_f, y_seg=y_seg, x_dat = DT$x, z_dat = DT$z)
 hist(sim2, breaks = 50)
 
 # benchmarking: 
@@ -68,7 +82,7 @@ bm_piecewise = bench::mark(
   
   piecewise2 = {
     piecewise_simulation2(
-      N=1000, 
+      N=N_bench, 
       log_f, 
       y_seg=y_seg, 
       x_dat = DT$x, 
@@ -148,7 +162,7 @@ p3 = profvis::profvis({
   set.seed(123)
 
   y2 = piecewise_simulation2(
-    N = N_bench,
+    N = 5e6,
     log_f = log_f,
     y_seg = c(0.18, 0.30),
     x_dat = DT$x,
@@ -276,4 +290,77 @@ benchmark_results[, ms_per_accepted_draw :=
                     median_ms / (N_bench * acceptance_rate)
 ]
 
+
+
+# Grid for plotting
+yy <- seq(0.001, 0.5, by = 0.001)
+
+# True log-density
+log_vals <- log_f(
+  yy,
+  x_dat = DT$x,
+  z_dat = DT$z
+)
+
+# Rescale true density
+f_true <- exp(log_vals - max(log_vals))
+
+
+yy <- seq(0.01, 0.5, by = 0.001)
+
+log_vals <- log_f(yy, x_dat = DT$x, z_dat = DT$z)
+
+y_seg <- c(0.18, 0.30)
+
+# Tangent slopes
+a <- sapply(
+  y_seg,
+  d_log_f,
+  x_dat = DT$x,
+  z_dat = DT$z
+)
+
+# Tangent intercepts
+b <- log_f(
+  y_seg,
+  x_dat = DT$x,
+  z_dat = DT$z
+) - a * y_seg
+
+# Intersection of the two tangent lines
+z <- (b[2] - b[1]) / (a[1] - a[2])
+
+z
+
+left <- yy <= z
+right <- yy >= z
+
+tangent_left <- a[1] * yy + b[1]
+tangent_right <- a[2] * yy + b[2]
+
+plot(
+  yy,
+  log_vals,
+  type = "l",
+  lwd = 2,
+  xlab = expression(y),
+  ylab = expression(log(f(y))),
+  main = "Log-density with tangent envelope"
+)
+
+lines(
+  yy[left],
+  tangent_left[left],
+  col = "red",
+  lwd = 2
+)
+
+lines(
+  yy[right],
+  tangent_right[right],
+  col = "red",
+  lwd = 2
+)
+
+abline(v = z, lty = 2)
 
